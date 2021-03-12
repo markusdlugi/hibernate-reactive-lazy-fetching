@@ -34,6 +34,9 @@ public class TestResource {
 	@Inject
 	Mutiny.Session session;
 
+	@Inject
+	Mutiny.SessionFactory sessionFactory;
+
 	@POST
 	@Path("/failing")
 	public Uni<Author> createAuthor() {
@@ -54,8 +57,25 @@ public class TestResource {
 	public Uni<Collection<Book>> getBooks(@RestPath
 	final Integer authorId) {
 		return session.find( Author.class, authorId )
-				// lazily fetch their books
-				.chain( author -> fetch(author.getBooks()));
+			// lazily fetch their books
+			.chain( author -> fetch(author.getBooks()));
+	}
+
+	@GET
+	@Path("/failingReference/{authorId}")
+	public Uni<Collection<Book>> getBooksUsingReference(@RestPath
+	final Integer authorId) {
+		Author reference = session.getReference(Author.class, authorId);
+		return fetch(reference.getBooks());
+	}
+
+	@GET
+	@Path("/failingStateless/{authorId}")
+	public Uni<Collection<Book>> getBooksUsingStatelessSession(@RestPath
+	final Integer authorId) {
+		return sessionFactory.openStatelessSession().get( Author.class, authorId )
+			// lazily fetch their books
+			.chain( a -> fetch(a.getBooks()));
 	}
 
 	@POST
